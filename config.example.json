@@ -14,36 +14,5 @@
     27,
     28,
     29
-  ],
-  "render_wait_ms": 5000,
-  "site_card_selector": "",
-  "available_keywords": [
-    "available",
-    "select",
-    "reserve",
-    "book",
-    "add to cart",
-    "disponible",
-    "sélectionner",
-    "réserver"
-  ],
-  "unavailable_keywords": [
-    "not available",
-    "unavailable",
-    "occupied",
-    "reserved",
-    "sold out",
-    "not reservable",
-    "non disponible",
-    "indisponible",
-    "occupé",
-    "réservé"
-  ],
-  "cookie_accept_selectors": [
-    "button:has-text('Accept all')",
-    "button:has-text('Accept')",
-    "button:has-text('I agree')",
-    "button:has-text('Accepter tout')",
-    "button:has-text('Accepter')"
   ]
 }
