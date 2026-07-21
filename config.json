@@ -1,18 +1,8 @@
 {
-  "campground": "Mkwesaqtuk/Cap-Rouge",
-  "arrival": "2026-09-04",
-  "departure": "2026-09-07",
-  "party_size": 2,
-  "equipment": "one small tent",
-  "sites": [
-    17,
-    22,
-    23,
-    24,
-    25,
-    26,
-    27,
-    28,
-    29
-  ]
+  "campground": "[Replace with your campground]",
+  "arrival": "[Replace with arrival date]",
+  "departure": "[Replace with departure date]",
+  "party_size": 0,
+  "equipment": "[Replace with equipment type]",
+  "sites": []
 }
