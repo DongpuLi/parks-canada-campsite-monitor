@@ -5,6 +5,7 @@ import os
 import re
 import smtplib
 import sys
+import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from email.message import EmailMessage
@@ -591,6 +592,63 @@ def detect_wrong_page(page: Page, config: dict[str, Any]) -> None:
         )
 
 
+def run_with_retry(browser: Browser, config: dict[str, Any], max_retries: int = 3) -> list[Result]:
+    """
+    Execute the monitoring run with automatic retry on network/transient errors.
+    
+    Args:
+        browser: Playwright browser instance
+        config: Configuration dictionary
+        max_retries: Maximum number of retry attempts (default: 3)
+    
+    Returns:
+        List of Result objects indicating availability of target sites
+    
+    Raises:
+        RuntimeError: After all retries are exhausted
+    """
+    last_error = None
+    
+    for attempt in range(1, max_retries + 1):
+        try:
+            log(f"[Attempt {attempt}/{max_retries}] Starting check")
+            return run(browser, config)
+        except RuntimeError as exc:
+            error_msg = str(exc).lower()
+            last_error = exc
+            
+            # Determine if error is retryable
+            retryable_errors = [
+                "does not look like a parks canada",  # Wrong page loaded (network issue)
+                "could not locate or click",           # Page not ready
+                "could not expand the complete",       # Incomplete page load
+                "http",                                # HTTP errors
+                "timeout",                             # Network timeout
+                "net::",                               # Network errors
+            ]
+            
+            is_retryable = any(token in error_msg for token in retryable_errors)
+            
+            if not is_retryable:
+                # Not a transient error, raise immediately
+                log(f"[Attempt {attempt}/{max_retries}] Non-retryable error: {exc}")
+                raise
+            
+            if attempt < max_retries:
+                wait_time = 5 * attempt  # 5s, 10s, 15s between retries
+                log(f"[Attempt {attempt}/{max_retries}] Retryable error - waiting {wait_time}s before retry: {exc}")
+                time.sleep(wait_time)
+            else:
+                log(f"[Attempt {attempt}/{max_retries}] Final attempt failed: {exc}")
+        except Exception as exc:
+            # Unexpected error - don't retry
+            log(f"[Attempt {attempt}/{max_retries}] Unexpected error (not retrying): {type(exc).__name__}: {exc}")
+            raise
+    
+    # Should not reach here, but just in case
+    raise RuntimeError(f"All {max_retries} retry attempts failed") from last_error
+
+
 def run(browser: Browser, config: dict[str, Any]) -> list[Result]:
     log("Creating browser context")
     context = browser.new_context(
@@ -697,7 +755,7 @@ def main() -> int:
             log("Launching Chromium")
             browser = playwright.chromium.launch(headless=HEADLESS)
             try:
-                results = run(browser, config)
+                results = run_with_retry(browser, config, max_retries=3)
             finally:
                 log("Closing Chromium")
                 browser.close()
