@@ -1,8 +1,6 @@
 {
-  "campground": "[Replace with your campground]",
-  "arrival": "[Replace with arrival date]",
-  "departure": "[Replace with departure date]",
+  "campground": "",
   "party_size": 0,
-  "equipment": "[Replace with equipment type]",
+  "equipment": "",
   "sites": []
 }
