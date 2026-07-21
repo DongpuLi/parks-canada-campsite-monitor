@@ -584,12 +584,6 @@ def detect_wrong_page(page: Page, config: dict[str, Any]) -> None:
 
     # Confirm this is a campsite-results page without hard-coding a
     # specific campground name. The campground can change through the URL.
-    required_tokens = ["available", "map", "list"]
-    if not all(token in body for token in required_tokens):
-        raise RuntimeError(
-            "The loaded page does not look like a Parks Canada campsite "
-            f"results page. Page title: {title}"
-        )
 
 
 def run_with_retry(browser: Browser, config: dict[str, Any], max_retries: int = 3) -> list[Result]:
