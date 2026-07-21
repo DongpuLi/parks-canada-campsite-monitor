@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from email.message import EmailMessage
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qs, urlparse
 
 from playwright.sync_api import Browser, Page, sync_playwright
 
@@ -18,6 +19,8 @@ ROOT = Path(__file__).resolve().parent
 ARTIFACTS = ROOT / "artifacts"
 CONFIG_PATH = Path(os.getenv("MONITOR_CONFIG", ROOT / "config.json"))
 SEARCH_URL = os.getenv("PARKS_SEARCH_URL", "").strip()
+TARGET_SITES_RAW = os.getenv("TARGET_SITES", "").strip()
+MONITOR_LABEL = os.getenv("MONITOR_LABEL", "").strip()
 HEADLESS = os.getenv("HEADLESS", "true").lower() != "false"
 
 
@@ -36,26 +39,74 @@ def normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text or "").strip()
 
 
+def parse_target_sites(raw: str) -> list[int]:
+    values = re.split(r"[\s,;]+", raw.strip())
+    sites: list[int] = []
+
+    for value in values:
+        if not value:
+            continue
+        if not value.isdigit():
+            raise ValueError(
+                f"Invalid TARGET_SITES value: {value!r}. "
+                "Use comma-separated numbers, for example 17,22,23."
+            )
+        site = int(value)
+        if site not in sites:
+            sites.append(site)
+
+    if not sites:
+        raise ValueError(
+            "TARGET_SITES is empty. Set it to comma-separated site numbers."
+        )
+
+    return sites
+
+
+def derive_search_metadata(url: str) -> dict[str, Any]:
+    query = parse_qs(urlparse(url).query)
+
+    arrival = query.get("startDate", ["unknown"])[0]
+    departure = query.get("endDate", ["unknown"])[0]
+    nights = query.get("nights", ["unknown"])[0]
+
+    return {
+        "arrival": arrival,
+        "departure": departure,
+        "nights": nights,
+    }
+
+
 def load_config() -> dict[str, Any]:
-    if not CONFIG_PATH.exists():
-        raise FileNotFoundError(f"Missing configuration file: {CONFIG_PATH}")
+    base: dict[str, Any] = {}
 
-    config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+    if CONFIG_PATH.exists():
+        base = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
 
-    required = [
-        "campground",
-        "arrival",
-        "departure",
-        "party_size",
-        "equipment",
-        "sites",
-    ]
-    missing = [key for key in required if key not in config]
-    if missing:
-        raise ValueError(f"Missing config key(s): {', '.join(missing)}")
+    if TARGET_SITES_RAW:
+        sites = parse_target_sites(TARGET_SITES_RAW)
+    elif base.get("sites"):
+        sites = [int(site) for site in base["sites"]]
+    else:
+        raise ValueError(
+            "No target sites configured. Set the TARGET_SITES repository "
+            "variable, for example 17,22,23."
+        )
 
-    config["sites"] = [int(site) for site in config["sites"]]
-    return config
+    metadata = derive_search_metadata(SEARCH_URL)
+
+    return {
+        "campground": MONITOR_LABEL or base.get(
+            "campground",
+            "Parks Canada campground",
+        ),
+        "arrival": metadata["arrival"],
+        "departure": metadata["departure"],
+        "nights": metadata["nights"],
+        "party_size": base.get("party_size", "configured in URL"),
+        "equipment": base.get("equipment", "configured in URL"),
+        "sites": sites,
+    }
 
 
 def send_email(subject: str, body: str) -> None:
@@ -530,11 +581,13 @@ def detect_wrong_page(page: Page, config: dict[str, Any]) -> None:
             f"Reservation site blocked automation. Page title: {title}"
         )
 
-    campground = config["campground"].lower()
-    if campground not in body:
+    # Confirm this is a campsite-results page without hard-coding a
+    # specific campground name. The campground can change through the URL.
+    required_tokens = ["available", "map", "list"]
+    if not all(token in body for token in required_tokens):
         raise RuntimeError(
-            f"Expected campground '{config['campground']}' was not found "
-            f"on the loaded page. Page title: {title}"
+            "The loaded page does not look like a Parks Canada campsite "
+            f"results page. Page title: {title}"
         )
 
 
@@ -611,8 +664,8 @@ def write_report(
         "campground": config["campground"],
         "arrival": config["arrival"],
         "departure": config["departure"],
-        "party_size": config["party_size"],
-        "equipment": config["equipment"],
+        "party_size": "configured in PARKS_SEARCH_URL",
+        "equipment": "configured in PARKS_SEARCH_URL",
         "results": [asdict(result) for result in results],
     }
 
@@ -681,8 +734,7 @@ def main() -> int:
             f"Available campsite(s): {sites}\n"
             f"Campground: {config['campground']}\n"
             f"Stay: {config['arrival']} to {config['departure']}\n"
-            f"Party: {config['party_size']} people, "
-            f"{config['equipment']}\n\n"
+            "Party and equipment: configured in the booking URL\n\n"
             f"Booking page:\n{SEARCH_URL}"
         )
 
