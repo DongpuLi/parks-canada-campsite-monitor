@@ -2,6 +2,19 @@ name: Parks Canada campsite monitor
 
 on:
   workflow_dispatch:
+    inputs:
+      search_url:
+        description: "Optional one-time Parks Canada results URL"
+        required: false
+        type: string
+      target_sites:
+        description: "Optional one-time site numbers, e.g. 17,22,23"
+        required: false
+        type: string
+      monitor_label:
+        description: "Optional label for this one-time check"
+        required: false
+        type: string
   schedule:
     - cron: "17 * * * *"
 
@@ -14,6 +27,9 @@ concurrency:
 
 jobs:
   check:
+    # Scheduled checks obey MONITOR_ENABLED.
+    # Manual runs are always allowed for testing.
+    if: github.event_name == 'workflow_dispatch' || vars.MONITOR_ENABLED == 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -34,7 +50,9 @@ jobs:
 
       - name: Check campsite availability
         env:
-          PARKS_SEARCH_URL: ${{ secrets.PARKS_SEARCH_URL }}
+          PARKS_SEARCH_URL: ${{ inputs.search_url || vars.PARKS_SEARCH_URL }}
+          TARGET_SITES: ${{ inputs.target_sites || vars.TARGET_SITES }}
+          MONITOR_LABEL: ${{ inputs.monitor_label || vars.MONITOR_LABEL }}
           HEADLESS: "true"
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
