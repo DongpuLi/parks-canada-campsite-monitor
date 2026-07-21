@@ -1,0 +1,16 @@
+{
+  "campground": "Mkwesaqtuk/Cap-Rouge",
+  "arrival": "2026-09-04",
+  "departure": "2026-09-07",
+  "party_size": 2,
+  "equipment": "small tent",
+  "sites": [17, 22, 23, 24, 25, 26, 27, 28, 29],
+  "available_keywords": ["available", "select", "reserve", "book", "disponible", "sélectionner", "réserver"],
+  "unavailable_keywords": ["unavailable", "not available", "occupied", "sold out", "indisponible", "complet"],
+  "site_card_selector": "",
+  "cookie_accept_selectors": [
+    "button:has-text('Accept')",
+    "button:has-text('I agree')",
+    "button:has-text('Accepter')"
+  ]
+}
