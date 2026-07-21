@@ -40,12 +40,11 @@ def normalize(text: str) -> str:
 
 
 def site_patterns(site: int) -> list[re.Pattern[str]]:
-    # Require a label-like boundary so site 17 does not match 117.
     return [
-        re.compile(rf"(?i)\bsite\s*#?\s*0*{site}\b"),
-        re.compile(rf"(?i)\bcampsite\s*#?\s*0*{site}\b"),
-        re.compile(rf"(?i)\bemplacement\s*#?\s*0*{site}\b"),
-        re.compile(rf"(?i)^\s*#?\s*0*{site}\s*$"),
+        re.compile(rf"\bsite\s*#?\s*0*{site}\b", re.IGNORECASE),
+        re.compile(rf"\bcampsite\s*#?\s*0*{site}\b", re.IGNORECASE),
+        re.compile(rf"\bemplacement\s*#?\s*0*{site}\b", re.IGNORECASE),
+        re.compile(rf"^\s*#?\s*0*{site}\s*$", re.IGNORECASE),
     ]
 
 
@@ -75,8 +74,18 @@ def candidate_cards(page: Page, site: int, explicit_selector: str) -> list[Locat
 
     # Find exact or labelled occurrences, then climb ancestors to a likely card/container.
     text_locators = [
-        page.get_by_text(re.compile(rf"(?i)^\s*(?:site|campsite|emplacement)?\s*#?\s*0*{site}\s*$")),
-        page.get_by_text(re.compile(rf"(?i)\b(?:site|campsite|emplacement)\s*#?\s*0*{site}\b")),
+        page.get_by_text(
+            re.compile(
+                rf"^\s*(?:site|campsite|emplacement)?\s*#?\s*0*{site}\s*$",
+                re.IGNORECASE,
+            )
+        ),
+        page.get_by_text(
+            re.compile(
+                rf"\b(?:site|campsite|emplacement)\s*#?\s*0*{site}\b",
+                re.IGNORECASE,
+            )
+        ),
     ]
 
     seen: set[str] = set()
