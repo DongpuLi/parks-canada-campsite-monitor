@@ -150,25 +150,74 @@ def click_consent(page: Page) -> None:
 def switch_to_list_view(page: Page) -> None:
     log("Switching to List view")
 
+    # Parks Canada renders this control as:
+    # <button id="list-view-button-button"
+    #         role="radio"
+    #         aria-label="List view of results">
     candidates = [
-        page.get_by_role("button", name=re.compile(r"^list$", re.IGNORECASE)),
-        page.get_by_role("tab", name=re.compile(r"^list$", re.IGNORECASE)),
-        page.get_by_text(re.compile(r"^list$", re.IGNORECASE)),
+        page.locator("#list-view-button-button"),
+        page.get_by_role(
+            "radio",
+            name=re.compile(r"list view of results", re.IGNORECASE),
+        ),
+        page.locator(
+            "button[aria-label='List view of results']"
+        ),
+        page.locator("#list-view-button button"),
     ]
 
-    for locator in candidates:
-        try:
-            if locator.count() > 0:
-                target = locator.first
-                if target.is_visible(timeout=1_500):
-                    target.click(timeout=5_000)
-                    page.wait_for_timeout(2_000)
-                    log("List view selected")
-                    return
-        except Exception:
-            continue
+    errors: list[str] = []
 
-    raise RuntimeError("Could not locate or click the List view control")
+    for index, locator in enumerate(candidates, start=1):
+        try:
+            count = locator.count()
+            log(f"List selector {index}: found {count} element(s)")
+
+            if count == 0:
+                continue
+
+            target = locator.first
+            target.scroll_into_view_if_needed(timeout=5_000)
+
+            if not target.is_visible(timeout=2_000):
+                errors.append(f"selector {index}: element not visible")
+                continue
+
+            aria_checked = target.get_attribute("aria-checked")
+            if aria_checked == "true":
+                log("List view is already selected")
+                return
+
+            target.click(timeout=5_000)
+            page.wait_for_timeout(2_000)
+
+            # Confirm that Angular changed the selected view.
+            selected = target.get_attribute("aria-checked")
+            list_view_present = page.locator("app-list-view").count() > 0
+
+            log(
+                "List click result: "
+                f"aria-checked={selected}, "
+                f"app-list-view count={page.locator('app-list-view').count()}"
+            )
+
+            if selected == "true" or list_view_present:
+                log("List view selected")
+                return
+
+            errors.append(
+                f"selector {index}: click completed but List view was not confirmed"
+            )
+
+        except Exception as exc:
+            errors.append(
+                f"selector {index}: {type(exc).__name__}: {exc}"
+            )
+
+    raise RuntimeError(
+        "Could not locate or click the List view control. "
+        + " | ".join(errors)
+    )
 
 
 def ensure_available_filter(page: Page) -> None:
