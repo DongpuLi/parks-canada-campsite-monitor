@@ -28,6 +28,22 @@ Under the adjacent `Secrets` tab:
 - `ALERT_EMAIL`
 - `ALERT_FROM`
 
+## Configuration priority
+
+The `monitor.py` script loads configuration in this priority order:
+
+1. **GitHub Actions environment variables** (highest priority)
+   - `PARKS_SEARCH_URL`, `TARGET_SITES`, `MONITOR_LABEL`
+   - Set via repository variables or workflow dispatch inputs
+2. **config.json** (fallback values only)
+   - `sites`: fallback site numbers if `TARGET_SITES` is not set
+   - `party_size`, `equipment`, `campground`: informational fields
+3. **Derived from URL** (highest priority for dates)
+   - `arrival`, `departure`, `nights` extracted from `PARKS_SEARCH_URL`
+
+**Keep `config.json` empty or minimal** — it exists only as an optional fallback.
+All critical settings must be configured via GitHub Actions variables.
+
 ## Manual test
 
 Open `Actions → Parks Canada campsite monitor → Run workflow`.
