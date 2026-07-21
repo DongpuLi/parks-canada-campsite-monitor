@@ -1,9 +1,9 @@
 name: Parks Canada campsite monitor
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: "17 * * * *"
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,13 +15,15 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v6
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
         with:
-          python-version: "3.13"
+          python-version: "3.12"
           cache: pip
 
       - name: Install Python dependencies
@@ -33,14 +35,14 @@ jobs:
       - name: Check campsite availability
         env:
           PARKS_SEARCH_URL: ${{ secrets.PARKS_SEARCH_URL }}
+          HEADLESS: "true"
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
           SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
           ALERT_FROM: ${{ secrets.ALERT_FROM }}
-          HEADLESS: "true"
-        run: python monitor.py
+        run: python -u monitor.py
 
       - name: Upload diagnostic artifacts
         if: always()
@@ -48,5 +50,5 @@ jobs:
         with:
           name: campsite-monitor-${{ github.run_number }}
           path: artifacts/
+          if-no-files-found: warn
           retention-days: 7
-          if-no-files-found: ignore
