@@ -13,6 +13,8 @@ Create:
 
 - `MONITOR_ENABLED`: `true` to run hourly, `false` to pause scheduled checks
 - `PARKS_SEARCH_URL`: the complete Parks Canada reservation-results URL
+  ⚠️ **Important:** Enter the **list view** URL, not the map view. The monitor
+  extracts availability from the list view.
 - `TARGET_SITES`: comma-separated site numbers, for example `17,22,23,24`
 - `MONITOR_LABEL`: optional descriptive name, for example
   `Mkwesaqtuk/Cap-Rouge Sep 4–7`
