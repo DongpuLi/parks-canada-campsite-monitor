@@ -279,6 +279,99 @@ def wait_for_list_content(page: Page) -> None:
     log("No explicit result marker found; continuing with DOM extraction")
 
 
+def expand_all_list_results(page: Page) -> None:
+    """
+    Parks Canada initially renders only part of the available-site list and
+    exposes a 'View more' control. Click it repeatedly until all rows are loaded.
+    """
+    log("Expanding all List results")
+
+    previous_available_count = -1
+
+    for attempt in range(1, 30):
+        available_count = page.get_by_text(
+            re.compile(r"^available$", re.IGNORECASE),
+            exact=True,
+        ).count()
+
+        log(
+            f"Expansion pass {attempt}: "
+            f"{available_count} available row label(s) currently loaded"
+        )
+
+        candidates = [
+            page.get_by_role(
+                "button",
+                name=re.compile(r"^view more$", re.IGNORECASE),
+            ),
+            page.get_by_text(
+                re.compile(r"^view more$", re.IGNORECASE),
+                exact=True,
+            ),
+            page.locator(
+                "button:has-text('View more'), "
+                "a:has-text('View more')"
+            ),
+        ]
+
+        view_more = None
+        for candidate in candidates:
+            try:
+                if candidate.count() > 0:
+                    visible = candidate.filter(visible=True) if hasattr(candidate, "filter") else candidate
+                    target = candidate.first
+                    if target.is_visible(timeout=1_000):
+                        view_more = target
+                        break
+            except Exception:
+                continue
+
+        if view_more is None:
+            log("No visible 'View more' control remains; full list should be loaded")
+            return
+
+        try:
+            disabled = (
+                view_more.get_attribute("disabled") is not None
+                or view_more.get_attribute("aria-disabled") == "true"
+            )
+            if disabled:
+                log("'View more' is disabled; full list should be loaded")
+                return
+
+            view_more.scroll_into_view_if_needed(timeout=5_000)
+            view_more.click(timeout=5_000)
+            page.wait_for_timeout(1_500)
+
+            new_count = page.get_by_text(
+                re.compile(r"^available$", re.IGNORECASE),
+                exact=True,
+            ).count()
+
+            log(
+                f"Clicked 'View more': available rows "
+                f"{available_count} -> {new_count}"
+            )
+
+            if new_count <= available_count and available_count == previous_available_count:
+                raise RuntimeError(
+                    "'View more' remained visible but the available-site "
+                    "row count did not increase"
+                )
+
+            previous_available_count = available_count
+
+        except Exception as exc:
+            raise RuntimeError(
+                f"Could not expand the complete List view: "
+                f"{type(exc).__name__}: {exc}"
+            ) from exc
+
+    raise RuntimeError(
+        "Stopped after 30 'View more' passes; the list may not have fully loaded"
+    )
+
+
 def extract_available_sites(page: Page) -> list[int]:
     """
     Extract site numbers from rows/cards that contain an exact Available label.
@@ -484,6 +577,7 @@ def run(browser: Browser, config: dict[str, Any]) -> list[Result]:
         switch_to_list_view(page)
         ensure_available_filter(page)
         wait_for_list_content(page)
+        expand_all_list_results(page)
         save_debug(page, "list-view")
 
         available_sites = extract_available_sites(page)
