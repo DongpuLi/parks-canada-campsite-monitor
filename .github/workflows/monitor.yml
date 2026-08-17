@@ -12,7 +12,19 @@ on:
         required: false
         type: string
       monitor_label:
-        description: "Optional label for this one-time check"
+        description: "Optional Monitor 1 label for this one-time check"
+        required: false
+        type: string
+      search_url_2:
+        description: "Optional one-time Monitor 2 Parks Canada results URL"
+        required: false
+        type: string
+      target_sites_2:
+        description: "Optional one-time Monitor 2 site numbers, e.g. 1,2,3"
+        required: false
+        type: string
+      monitor_label_2:
+        description: "Optional Monitor 2 label for this one-time check"
         required: false
         type: string
 
@@ -28,6 +40,7 @@ concurrency:
 
 jobs:
   check:
+    if: github.event_name == 'workflow_dispatch' || vars.MONITOR_ENABLED == 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -51,11 +64,14 @@ jobs:
       - name: Install Chromium and system dependencies
         run: python -m playwright install --with-deps chromium
 
-      - name: Check campsite availability
+      - name: Check Monitor 1 campsite availability
+        id: monitor_1
+        continue-on-error: true
         env:
           PARKS_SEARCH_URL: ${{ inputs.search_url || vars.PARKS_SEARCH_URL }}
           TARGET_SITES: ${{ inputs.target_sites || vars.TARGET_SITES }}
           MONITOR_LABEL: ${{ inputs.monitor_label || vars.MONITOR_LABEL }}
+          ARTIFACTS_DIR: artifacts/monitor-1
           HEADLESS: "true"
 
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
@@ -67,11 +83,49 @@ jobs:
 
         run: python -u monitor.py
 
-      - name: Upload diagnostic artifacts
-        if: failure()
+      - name: Check Monitor 2 campsite availability
+        id: monitor_2
+        continue-on-error: true
+        env:
+          PARKS_SEARCH_URL: ${{ inputs.search_url_2 || vars.PARKS_SEARCH_URL_2 }}
+          TARGET_SITES: ${{ inputs.target_sites_2 || vars.TARGET_SITES_2 }}
+          MONITOR_LABEL: ${{ inputs.monitor_label_2 || vars.MONITOR_LABEL_2 }}
+          ARTIFACTS_DIR: artifacts/monitor-2
+          HEADLESS: "true"
+
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
+          ALERT_FROM: ${{ secrets.ALERT_FROM }}
+
+        run: python -u monitor.py
+
+      - name: Upload Monitor 1 diagnostic artifacts
+        if: always() && steps.monitor_1.outcome == 'failure'
         uses: actions/upload-artifact@v5
         with:
-          name: campsite-monitor-failure-${{ github.run_number }}
-          path: artifacts/
+          name: campsite-monitor-1-failure-${{ github.run_number }}
+          path: artifacts/monitor-1/
           if-no-files-found: ignore
           retention-days: 3
+
+      - name: Upload Monitor 2 diagnostic artifacts
+        if: always() && steps.monitor_2.outcome == 'failure'
+        uses: actions/upload-artifact@v5
+        with:
+          name: campsite-monitor-2-failure-${{ github.run_number }}
+          path: artifacts/monitor-2/
+          if-no-files-found: ignore
+          retention-days: 3
+
+      - name: Report monitor failures
+        if: always() && (steps.monitor_1.outcome == 'failure' || steps.monitor_2.outcome == 'failure')
+        env:
+          MONITOR_1_OUTCOME: ${{ steps.monitor_1.outcome }}
+          MONITOR_2_OUTCOME: ${{ steps.monitor_2.outcome }}
+        run: |
+          echo "Monitor 1: $MONITOR_1_OUTCOME"
+          echo "Monitor 2: $MONITOR_2_OUTCOME"
+          exit 1

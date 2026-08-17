@@ -23,6 +23,9 @@
 | `PARKS_SEARCH_URL` | 完整的公园预订 URL | `https://www.pc.gc.ca/...` |
 | `TARGET_SITES` | 逗号分隔的营地号 | `17,22,23,24,25` |
 | `MONITOR_LABEL` | 可选：你的行程标签 | `Mkwesaqtuk/Cap-Rouge Sep 4–7` |
+| `PARKS_SEARCH_URL_2` | Monitor 2 的完整公园预订 URL | `https://reservation.pc.gc.ca/...` |
+| `TARGET_SITES_2` | Monitor 2 的逗号分隔营地号 | `1,2,3` |
+| `MONITOR_LABEL_2` | 可选：Monitor 2 的行程标签 | `Second trip Oct 9–12` |
 
 ### 如何获取 PARKS_SEARCH_URL：
 1. 打开 https://www.pc.gc.ca/
@@ -68,7 +71,7 @@ ALERT_FROM: your-email@gmail.com
 1. 去：https://github.com/DongpuLi/parks-canada-campsite-monitor/actions
 2. 选择 **"Parks Canada campsite monitor"** workflow
 3. 点击 **"Run workflow"**
-4. 三个输入框都留空（会使用保存的 Variables 和 Secrets）
+4. 六个输入框都留空（会使用保存的两组 Variables 和 Secrets）
 5. 点击 **"Run workflow"**
 6. 检查运行结果和你的邮箱
 
@@ -81,6 +84,7 @@ ALERT_FROM: your-email@gmail.com
 - **定时运行**：每小时检查一次（`MONITOR_ENABLED = true`）
 - **手动运行**：随时点击 "Run workflow" 测试
 - **可用时发送邮件**：如果你指定的营地有空位，会立即通知
+- **失败时不发邮件**：失败详情保留在 GitHub Actions 日志和诊断 artifacts 中
 
 ---
 
@@ -104,7 +108,7 @@ ALERT_FROM: your-email@gmail.com
 - A: 将 `MONITOR_ENABLED` 改为 `false`
 
 **Q: 可以监控多个营地吗？**
-- A: 可以！在 `PARKS_SEARCH_URL` 中改变营地，然后点击 "Run workflow" 手动运行。或者创建新的 workflow 文件处理多个营地。
+- A: 可以。同一个 workflow 会依次运行 Monitor 1 和 Monitor 2，两组 URL、营地号和标签互相独立。
 
 ---
 
