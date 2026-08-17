@@ -17,7 +17,7 @@ from playwright.sync_api import Browser, Page, sync_playwright
 
 
 ROOT = Path(__file__).resolve().parent
-ARTIFACTS = ROOT / "artifacts"
+ARTIFACTS = Path(os.getenv("ARTIFACTS_DIR", ROOT / "artifacts"))
 CONFIG_PATH = Path(os.getenv("MONITOR_CONFIG", ROOT / "config.json"))
 SEARCH_URL = os.getenv("PARKS_SEARCH_URL", "").strip()
 TARGET_SITES_RAW = os.getenv("TARGET_SITES", "").strip()
@@ -764,18 +764,6 @@ def main() -> int:
             "map-view.png, list-view.png, and list-view.html."
         )
         log(message)
-
-        try:
-            send_email(
-                "Parks Canada monitor needs attention",
-                message,
-            )
-        except Exception as email_exc:
-            log(
-                "Failure email could not be sent: "
-                f"{type(email_exc).__name__}: {email_exc}"
-            )
-
         return 1
 
     available = [result for result in results if result.available]
