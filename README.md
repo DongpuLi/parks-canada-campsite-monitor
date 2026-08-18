@@ -27,9 +27,9 @@ Create these additional Monitor 2 variables:
 
 Both monitors run independently in the same scheduled workflow. A failure in
 one does not prevent the other from running. If either fails, its own diagnostic
-artifact is uploaded and the workflow is marked failed after both checks finish.
-Failures do not send email. Email alerts are sent only when a configured target
-site is detected as available.
+artifact is uploaded, but an individual monitor failure does not mark the whole
+workflow as failed. Email alerts are sent only when a configured target site is
+detected as available.
 
 ## Email secrets
 
