@@ -84,7 +84,7 @@ ALERT_FROM: your-email@gmail.com
 - **定时运行**：每小时检查一次（`MONITOR_ENABLED = true`）
 - **手动运行**：随时点击 "Run workflow" 测试
 - **可用时发送邮件**：如果你指定的营地有空位，会立即通知
-- **失败时不发邮件**：失败详情保留在 GitHub Actions 日志和诊断 artifacts 中
+- **单个监控失败不触发失败提醒**：失败详情保留在 GitHub Actions 日志和诊断 artifacts 中，但整次 workflow 不会因此标记失败
 
 ---
 
