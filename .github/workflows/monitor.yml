@@ -66,6 +66,7 @@ jobs:
 
       - name: Check Monitor 1 campsite availability
         id: monitor_1
+        if: false                    
         continue-on-error: true
         env:
           PARKS_SEARCH_URL: ${{ inputs.search_url || vars.PARKS_SEARCH_URL }}
